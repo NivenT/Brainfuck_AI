@@ -1,0 +1,4 @@
+[package]
+name = "Brainfuck_AI"
+version = "0.1.0"
+authors = ["NivenT <nachenjang@gmail.com>"]
