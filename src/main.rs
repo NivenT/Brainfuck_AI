@@ -15,6 +15,7 @@ fn main() {
     	Err(why) => panic!("Could not reading program because {}", why),
     	_ => {}
     }
+    println!("{:?}", Interpreter::get_tokens(&mut prog));
     /*
     match iptr.run(prog) {
     	Ok(val) => {println!("\nOutput: {}", val)},
