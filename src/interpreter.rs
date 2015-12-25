@@ -1,6 +1,4 @@
-use std::io;
-use std::io::prelude::*;
-
+/*
 fn find_closing_bracket(prog: &Vec<char>, pos: usize) -> Result<usize, &'static str> {
 	let mut stack = 1;
 	let mut pos = pos + 1;
@@ -36,6 +34,7 @@ fn find_opening_bracket(prog: &Vec<char>, pos: usize) -> Result<usize, &'static 
 	}
 	return Ok(pos);
 }
+*/
 
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
@@ -56,6 +55,7 @@ enum Token {
 	GET_MSG   //prompts user to input a string (uses |msg| cells)
 }
 
+#[allow(dead_code)]
 pub struct Interpreter {
 	table: Vec<i64>,
 	dp: usize
@@ -72,6 +72,7 @@ impl Interpreter {
 		}
 		self.dp = 0;
 	}
+	/* Original function for running BF code
 	pub fn run(&mut self, prog: String) -> Result<i64, &str> {
 		let mut table = &mut self.table;
 		let mut dp = &mut self.dp;
@@ -109,4 +110,5 @@ impl Interpreter {
 		}
 		Ok(table[*dp])
 	}
+	*/
 }

@@ -7,6 +7,7 @@ use interpreter::*;
 #[allow(dead_code)]
 fn main() {
     let mut iptr = Interpreter::new();
+    iptr.reset(); // so warnings stay away
 
     let mut prog = String::new();
     println!("Enter program:");
@@ -14,10 +15,11 @@ fn main() {
     	Err(why) => panic!("Could not reading program because {}", why),
     	_ => {}
     }
-
+    /*
     match iptr.run(prog) {
     	Ok(val) => {println!("\nOutput: {}", val)},
     	Err(why) => {println!("\nError: {}", why)}
     }
     println!("");
+    */
 }
