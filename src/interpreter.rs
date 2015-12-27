@@ -1,40 +1,5 @@
-/*
-fn find_closing_bracket(prog: &Vec<char>, pos: usize) -> Result<usize, &'static str> {
-	let mut stack = 1;
-	let mut pos = pos + 1;
-	if pos >= prog.len() {return Err("[ without a closing ]");}
-	while stack != 0 {
-		match prog[pos] {
-			'[' => {stack += 1},
-			']' => {stack -= 1},
-			_ => {}
-		}
-		pos += 1;
-		if pos >= prog.len() {
-			return Err("[ without a closing ]");
-		}
-	}
-	return Ok(pos-1);
-}
-
-fn find_opening_bracket(prog: &Vec<char>, pos: usize) -> Result<usize, &'static str> {
-	let mut stack = 1;
-	if pos == 0 {return Err("] without an opening [");}
-	let mut pos = pos;
-	while stack != 0 {
-		if pos == 0 {
-			return Err("] without an opening [");
-		}
-		pos -= 1;
-		match prog[pos] {
-			'[' => {stack -= 1},
-			']' => {stack += 1},
-			_ => {}
-		}
-	}
-	return Ok(pos);
-}
-*/
+use std::io;
+use std::io::prelude::*;
 
 fn isnum(c: char) -> bool {
     match c {
@@ -45,7 +10,7 @@ fn isnum(c: char) -> bool {
 
 
 #[allow(non_camel_case_types)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Token {
 	//original Brainfuck
 	INC,
@@ -62,7 +27,6 @@ pub enum Token {
 	GET_MSG   //prompts user to input a string       (?)
 }
 
-#[allow(dead_code)]
 pub struct Interpreter {
 	table: Vec<i64>,
 	dp: usize
@@ -79,45 +43,62 @@ impl Interpreter {
 		}
 		self.dp = 0;
 	}
-	/* Original function for running BF code
-	pub fn run(&mut self, prog: String) -> Result<i64, &str> {
-		let mut table = &mut self.table;
-		let mut dp = &mut self.dp;
-
-		let chars: Vec<_> = prog.chars().collect();
-		let mut pos = 0;
-
-		while pos < chars.len() {
-			match chars[pos] {
-				'+' => {table[*dp] += 1},
-				'-' => {table[*dp] -= 1},
-				'>' => {*dp += 1},
-				'<' => {*dp = if *dp == 0 {0} else {*dp - 1}},
-				'[' => {
-					if table[*dp] == 0 {
-						match find_closing_bracket(&chars, pos) {
-							Ok(i) => {pos = i},
+	pub fn run(&mut self, prog: Vec<Token>) -> Result<i64,String> {
+		for tkn in prog {
+			match tkn {
+				Token::INC => {
+					self.table[self.dp] += 1
+				}, Token::DEC => {
+					self.table[self.dp] -= 1
+				}, Token::RIGHT => {
+					self.dp += 1
+				}, Token::LEFT => {
+					self.dp -= 1
+				}, Token::GET_CHAR => {
+					print!("Please enter a char: ");
+					io::stdout().flush().ok().expect("");
+					let mut c: [u8; 1] = [0];
+					match io::stdin().read(&mut c) {
+						Ok(_) => {self.table[self.dp] = c[0] as i64},
+						Err(msg) => {return Err(format!("{}", msg))}
+					}
+				}, Token::PUT_CHAR => {
+					print!("{}", (self.table[self.dp]%256) as u8 as char)
+				}, Token::GET_INT => {
+					print!("Please enter a number: ");
+					io::stdout().flush().ok().expect("");
+					let mut s = String::new();
+					io::stdin().read_line(&mut s).ok().expect("");
+					match s.trim().parse::<i64>() {
+						Ok(num) => {self.table[self.dp] = num},
+						Err(msg) => {return Err(format!("{}", msg))}
+					}
+				}, Token::PUT_INT => {
+					print!("{}", self.table[self.dp]);
+				}, Token::GET_MSG => {
+					print!("Please enter a string: ");
+					io::stdout().flush().ok().expect("");
+					let mut s = String::new();
+					io::stdin().read_line(&mut s).ok().expect("");
+					for c in s.chars() {
+						self.table[self.dp] = c as i64;
+						self.dp += 1;
+					}
+					self.dp -= s.chars().count();
+				}, Token::INT(n) => {
+					self.table[self.dp] = n
+				}, Token::LOOP(body) => {
+					while self.table[self.dp] != 0 {
+						match self.run(body.clone()) {
+							Ok(_) => {},
 							Err(msg) => {return Err(msg)}
 						}
 					}
-				},
-				']' => {
-					match find_opening_bracket(&chars, pos) {
-						Ok(i) => {pos = i-1},
-						Err(msg) => {return Err(msg)}
-					}
-				},
-				'.' => {
-					print!("{}", (table[*dp]%256) as u8 as char);
-					io::stdout().flush().ok().expect("")
-				},
-				_ => {}
+				}
 			}
-			pos += 1;
 		}
-		Ok(table[*dp])
+		Ok(self.table[self.dp])
 	}
-	*/
 	pub fn tokenize(prog: &mut String) -> Option<Token> {
 		match prog.remove(0) {
 			'+' => Some(Token::INC),
