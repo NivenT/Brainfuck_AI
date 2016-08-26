@@ -1,7 +1,6 @@
 use interpreter::*;
 use program::*;
 use rand::{Rng,thread_rng,random};
-use time::SteadyTime;
 
 #[allow(dead_code)]
 pub fn levenshtein(s1: &String, s2: &String) -> usize {
@@ -36,11 +35,11 @@ fn first_n(s: String, n: usize) -> String {
 	}
 }
 
+#[allow(dead_code)]
 fn diff(a: u8, b: u8) -> u8 {
 	if a > b {a-b} else {b-a}
 }
 
-#[allow(dead_code)]
 pub struct GAlgo {
 	pub generation: usize,
 	pub max_fit: f64,
@@ -55,61 +54,47 @@ pub struct GAlgo {
 }
 
 impl GAlgo {
-	pub fn new(size: usize, mut_rate: f64, cross_rate: f64, bred: f64, kept: f64, target: String) -> GAlgo {
+	pub fn new(size: usize, mut_rate: f64, cross_rate: f64, bred: f64, kept: f64, target: &str) -> GAlgo {
 	    let mut pop = vec![];
 	    for _ in 0..size {
 	    	pop.push(BFProgram::new(thread_rng().gen_range(5,15)));
 	    }
-	    GAlgo{pop: pop, mut_rate: mut_rate, target: target,
-	    		cross_rate: cross_rate, percent_bred: bred,
-	    		percent_kept: kept, generation: 0,
-	    		max_fit: 0f64, min_fit: 0f64}
+	    GAlgo {
+	    	pop: pop, 
+	    	mut_rate: mut_rate, 
+	    	target: target.to_string(),
+	    	cross_rate: cross_rate, 
+	    	percent_bred: bred,
+	    	percent_kept: kept,
+	    	generation: 0, 
+	    	max_fit: 0f64, 
+	    	min_fit: 0f64
+	    }
 	}
 	pub fn rand_prog(&self) -> BFProgram {
 		self.pop[thread_rng().gen_range(0,self.pop.len())].clone()
 	}
 	pub fn get_fitness(&self, prog: &BFProgram) -> f64 {
-		let mut iptr = Interpreter::new();
+		let mut iptr = Interpreter::new().print(false).limit(true);
 		let mut prog = prog.code.clone();
-		let _ = iptr.run(Interpreter::get_tokens(&mut prog), false, true, SteadyTime::now());
+		let mut input = InputTape::new();
+
+		let _ = iptr.run(Interpreter::get_tokens(&mut prog), &mut input, &mut None);
 		
 		/* String fitness function */
-		iptr.stdout = first_n(iptr.stdout.clone(), self.target.len());
+		//iptr.stdout = first_n(iptr.stdout.clone(), self.target.len());
 		//iptr.stdout.chars().zip(self.target.chars()).fold(0f64, |accum, (c1,c2)|
 		//	accum + 256f64 - (c1 as i32 - c2 as i32).abs() as f64)
-		let edit_dist = levenshtein(&iptr.stdout, &self.target);
+		let edit_dist = levenshtein(&iptr.out_stream, &self.target);
 		1f64/(1f64 + edit_dist as f64)
-		
-
-		/* Addition fitness function *
-		match iptr.stdin.len() {
-			2 => {
-				let (in1,in2) = (iptr.stdin[0],iptr.stdin[1]);
-				if let Input::INT(a) = in1 {
-					if let Input::INT(b) = in2 {
-						let val = iptr.return_val();
-						let sum = a as u32 + b as u32;
-						1f64 - diff(val,(sum%256) as u8) as f64/256f64
-					} else {
-						0f64
-					}
-				} else {
-					-0.5f64
-				}
-			},
-			_ => -1f64,
-		}
-		*/
 	}
 	pub fn step_pop(&mut self) -> Option<BFProgram> {
 		let mut fitness = vec![];
 		let mut tot_fit = 0f64;
 		self.max_fit = 0f64;
-		self.min_fit = 2f64;
+		self.min_fit = 3f64;
 		for i in 0..self.pop.len() {
-			let mut sample: Vec<_> = (0..21).map(|_| self.get_fitness(&self.pop[i])).collect();
-			sample.sort_by(|a, b| a.partial_cmp(b).unwrap());
-			let fit = sample[10];
+			let fit = self.get_fitness(&self.pop[i]);
 
 			if fit > self.max_fit {
 				self.max_fit = fit
@@ -127,40 +112,40 @@ impl GAlgo {
 
 		let q = 1f64 - (1f64-self.mut_rate).powf(1./NUM_MUTATIONS as f64); 
 		let num_bred = (self.percent_bred*self.pop.len() as f64).floor() as usize;
-		let mut new_pop = vec![];
+		let mut new_pop = Vec::with_capacity(self.pop.len());
 		while new_pop.len() < num_bred {
-			let mut mom: BFProgram;
-			let mut dad: BFProgram;
+			let mom: &BFProgram;
+			let dad: &BFProgram;
 
-			let mut rand = thread_rng().gen_range(0f64,tot_fit);
+			let mut rand = thread_rng().gen_range(0f64, tot_fit);
 			let mut index = 0;
 			while rand > fitness[index] {
 				rand -= fitness[index];
 				index += 1;
 			}
-			mom = self.pop[index].clone();
+			mom = &self.pop[index];
 
-			rand = thread_rng().gen_range(0f64,tot_fit);
+			rand = thread_rng().gen_range(0f64, tot_fit);
 			index = 0;
 			while rand > fitness[index] {
 				rand -= fitness[index];
 				index += 1;
 			}
-			dad = self.pop[index].clone();
+			dad = &self.pop[index];
 
-			if thread_rng().gen_range(0f64,1f64) < self.cross_rate {
-				let mut child = if random() {mom.cross(&mut dad)} else {dad.cross(&mut mom)};
-				if thread_rng().gen_range(0f64,1f64) < q {
+			if thread_rng().gen_range(0f64, 1f64) < self.cross_rate {
+				let mut child = if random() {mom.cross(dad)} else {dad.cross(mom)};
+				if thread_rng().gen_range(0f64, 1f64) < q {
 					child.mutate_ins()
-				} else if thread_rng().gen_range(0f64,1f64) < q {
+				} else if thread_rng().gen_range(0f64, 1f64) < q {
 					child.mutate_del()
-				} else if thread_rng().gen_range(0f64,1f64) < q {
+				} else if thread_rng().gen_range(0f64, 1f64) < q {
 					child.mutate_sub()
-				} else if thread_rng().gen_range(0f64,1f64) < q {
+				} else if thread_rng().gen_range(0f64, 1f64) < q {
 					child.mutate_trn()
-				} else if thread_rng().gen_range(0f64,1f64) < q {
+				} else if thread_rng().gen_range(0f64, 1f64) < q {
 					child.mutate_shl()
-				} else if thread_rng().gen_range(0f64,1f64) < q {
+				} else if thread_rng().gen_range(0f64, 1f64) < q {
 					child.mutate_shr()
 				}
 				new_pop.push(child);

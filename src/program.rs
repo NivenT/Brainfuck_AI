@@ -1,4 +1,3 @@
-//use interpreter::*;
 use std::fmt;
 use rand::{Rng,thread_rng};
 
@@ -9,10 +8,10 @@ pub fn min(a: usize, b: usize) -> usize {
 }
 
 fn random_char() -> &'static str {
-	let choices = vec!["+", "-", ">", "<", "[", "]", ".", "!",
+	let choices = vec!["+", "-", ">", "<", "[", "]", ",", ".",
 	                   "0", "1", "2", "3", "4", "5", "6", "7",
 					   "8", "9", "A", "B", "C", "D", "E", "F",
-					   "@", "*"];
+					   "!", "@", "*"];
 	choices[thread_rng().gen_range(0,choices.len())]
 }
 
@@ -77,19 +76,7 @@ impl BFProgram {
 			self.code = self.code[1..].to_string() + &self.code.remove(0).to_string();
 		}
 	}
-	/*
-	pub fn mutate_alp(&mut self) {
-		if self.code.len() == 0 {
-			self.code = "[]".to_string();
-		} else {
-			let piv1 = thread_rng().gen_range(0,self.code.len());
-			let piv2 = thread_rng().gen_range(piv1,self.code.len()+1);
-			self.code = self.code[0..piv1].to_string()
-						 + "[" + &self.code[piv1..piv2] + "]" + &self.code[piv2..];
-		}
-	}
-	*/
-	pub fn cross(&mut self, other: &mut BFProgram) -> BFProgram {
+	pub fn cross(&self, other: &BFProgram) -> BFProgram {
 		let (mom, dad) = (self.code.clone(), other.code.clone());
 		let pivot = if mom.len() == 0 || dad.len() == 0 {0} else {thread_rng().gen_range(0,min(mom.len(),dad.len()))};
 		BFProgram{code: mom[..pivot].to_string() + &dad[pivot..]}

@@ -1,7 +1,5 @@
 use time::{Duration, SteadyTime};
 use rand::random;
-use std::io;
-use std::io::prelude::*;
 
 fn has_matched_brackets(prog: &String) -> bool {
 	prog.chars().fold(0, |accum, c| match c {'['=>accum+1,']'=>accum-1,_=>accum})==-1
@@ -11,13 +9,13 @@ fn has_matched_brackets(prog: &String) -> bool {
 #[derive(Debug, Clone)]
 pub enum Token {
 	//original Brainfuck
-	INC, // increments value @ cell						(+)
-	DEC, //	decrements value @ cell						(-)
-	RIGHT, // increments data pointer					(>)
-	LEFT, // decrements data pointer					(<)
-	LOOP(Vec<Token>), // executes body while cell!=0	([..])
-	GET_CHAR, // prompts user to input a char			(,)
-	PUT_CHAR, // prints value @ cell as a char			(.)
+	INC, 		//increments value @ cell				(+)
+	DEC, 		//decrements value @ cell				(-)
+	RIGHT, 		//increments data pointer				(>)
+	LEFT, 		//decrements data pointer				(<)
+	LOOP(Vec<Token>), //executes body while cell!=0		([..])
+	GET, 		//reads value from input tape			(,)
+	PUT_CHAR, 	//prints value @ cell as a char			(.)
 	//new tokens for extended language
 	CONST0, 	//stores 0 at current cell  			(0)
 	CONST1, 	//stores 16 at current cell  			(1)
@@ -35,101 +33,116 @@ pub enum Token {
 	CONSTD, 	//stores 208 at current cell  			(D)
 	CONSTE, 	//stores 224 at current cell  			(E)
 	CONSTF, 	//stores 240 at current cell  			(F)
-	GET_INT,  	//prompts user to input an integer		(#)
 	PUT_INT,  	//prints value @ cell as an integer   	(!)
-	GET_MSG,  	//prompts user to input a string      	(?)
 	SAVE, 	  	//stores value @ cell in memory 		(@)
 	LOAD,	  	//stores value from memory in cell    	(*)
 }
 
-#[derive(Clone,Copy)]
-pub enum Input {
-	CHAR(char),
-	INT(u8)
+#[derive(Clone)]
+pub struct InputTape {
+	stream: String
 }
 
-pub struct Interpreter {
-	pub stdout: String,
-	pub stdin: Vec<Input>,
+#[allow(dead_code)]
+impl InputTape {
+	pub fn new() -> InputTape {
+		InputTape{stream: String::new()}
+	}
+	pub fn from_string(s: &str) -> InputTape {
+		InputTape{stream: s.to_string()}
+	}
+	pub fn random(len: usize) -> InputTape {
+		let mut stream = String::new();
+	    for _ in 0..len {
+	    	stream = stream + &random::<u8>().to_string();
+	    }
+	    InputTape{stream: stream}
+	}
 
-	mem: u8,
-	table: Vec<u8>,
-	dp: usize
+	fn read(&mut self) -> u8 {
+		if self.stream.len() > 0 {
+			self.stream.remove(0) as u8
+		} else {
+			0
+		}
+	}
+}
+
+#[derive(Clone)]
+pub struct Interpreter {
+	pub out_stream: 	String,
+	pub in_stream: 		InputTape,
+
+	mem: 				u8,
+	table: 				Vec<u8>,
+	dp: 				usize,		//Data pointer
+	print_output:		bool,
+	time_limit:			bool 
 }
 
 #[allow(dead_code)]
 impl Interpreter {
 	pub fn new() -> Interpreter {
-	    Interpreter{stdout: String::new(), stdin: vec![], table: vec![0; 1000], dp: 0, mem: 0}
+	    Interpreter {
+	    	out_stream: String::new(),
+	    	in_stream: InputTape::new(),
+	    	mem: 0,
+	    	table: vec![0; 1000],
+	    	dp:	0,
+	    	print_output: true,
+	    	time_limit:	false  
+	    }
+	}
+	pub fn print(&self, p: bool) -> Interpreter {
+		let mut ret = self.clone();
+		ret.print_output = p;
+		ret
+	}
+	pub fn limit(&self, p: bool) -> Interpreter {
+		let mut ret = self.clone();
+		ret.time_limit = p;
+		ret
 	}
 	pub fn reset(&mut self) {
-		self.table = vec![0; self.table.len()];
+		self.out_stream = String::new();
+		for i in 0..self.table.len() {
+			self.table[i] = 0;
+		}
 		self.dp = 0;
+		self.mem = 0;
 	}
-	pub fn run(&mut self, prog: Vec<Token>, print: bool, algo: bool, start: SteadyTime) -> Result<u8,String> {
+	pub fn run(&mut self, prog: Vec<Token>, input: &mut InputTape, start: &mut Option<SteadyTime>) -> Result<u8, &'static str> {
+		if start.is_none() && self.time_limit {
+			*start = Some(SteadyTime::now());
+		}
 		for tkn in prog {
-			if SteadyTime::now() - start > Duration::milliseconds(2) && algo {
-				return Err("Computation took too long".to_string());
+			if self.time_limit {
+				if SteadyTime::now() - start.unwrap() > Duration::milliseconds(2) {
+					return Err("Computation took too long");
+				}
 			}
+
 			match tkn {
 				Token::INC => {
-					if self.table[self.dp] < 255 {self.table[self.dp] += 1} else {self.table[self.dp] = 0}
+					self.table[self.dp] = self.table[self.dp].wrapping_add(1);
 				}, Token::DEC => {
-					if self.table[self.dp] > 0 {self.table[self.dp] -= 1} 
+					self.table[self.dp] = self.table[self.dp].wrapping_sub(1);
 				}, Token::RIGHT => {
-					self.dp += 1
+					self.dp += 1;
 				}, Token::LEFT => {
-					if self.dp != 0 {self.dp -= 1}
-				}, Token::GET_CHAR => {
-					let mut c: [u8; 1] = [0];
-					if algo {
-						c[0] = random();
-						self.table[self.dp] = c[0];
-					} else {
-						print!("Please enter a char: ");
-						io::stdout().flush().ok().expect("");
-						match io::stdin().read(&mut c) {
-							Ok(_) => {self.table[self.dp] = c[0]},
-							Err(msg) => {return Err(format!("{}", msg))}
-						}
-					}
-					self.stdin.push(Input::CHAR(c[0] as char))
+					self.dp = self.dp.saturating_sub(1);
+				}, Token::GET => {
+					self.table[self.dp] = input.read();
 				}, Token::PUT_CHAR => {
 					let c = self.table[self.dp] as char;
-					self.stdout = self.stdout.clone() + &c.to_string();
-					if print {print!("{}", c)}
-				}, Token::GET_INT => {
-					if algo {
-						self.table[self.dp] = random();
-					} else {
-						print!("Please enter a number: ");
-						io::stdout().flush().ok().expect("");
-						let mut s = String::new();
-						io::stdin().read_line(&mut s).ok().expect("");
-						match s.trim().parse::<u8>() {
-							Ok(num) => {self.table[self.dp] = num},
-							Err(msg) => {return Err(format!("{}", msg))}
-						}
-					}
-					self.stdin.push(Input::INT(self.table[self.dp]))
+					self.out_stream = self.out_stream.clone() + &c.to_string();
+					if self.print_output {print!("{}", c)}
 				}, Token::PUT_INT => {
-					self.stdout = self.stdout.clone() + &self.table[self.dp].to_string();
-					if print {print!("{}", self.table[self.dp])}
-				}, Token::GET_MSG => {
-					if !algo {
-						print!("Please enter a string: ");
-						io::stdout().flush().ok().expect("");
-						let mut s = String::new();
-						io::stdin().read_line(&mut s).ok().expect("");
-						for c in s.chars() {
-							self.table[self.dp] = c as u8;
-							self.dp += 1;
-						}
-						self.dp -= s.chars().count();
-					}
+					self.out_stream = self.out_stream.clone() + &self.table[self.dp].to_string();
+					if self.print_output {print!("{}", self.table[self.dp])}
 				}, Token::LOOP(body) => {
 					while self.table[self.dp] != 0 {
-						match self.run(body.clone(), print, algo, start) {
+						match self.run(body.clone(), input, start) {
 							Ok(_) => {},
 							Err(msg) => {return Err(msg)}
 						}
@@ -139,37 +152,37 @@ impl Interpreter {
 				}, Token::LOAD => {
 					self.table[self.dp] = self.mem;
 				}, Token::CONST0 => {
-					self.table[self.dp] = 0x0*15;
+					self.table[self.dp] = 0x0*16;
 				}, Token::CONST1 => {
-					self.table[self.dp] = 0x1*15;
+					self.table[self.dp] = 0x1*16;
 				}, Token::CONST2 => {
-					self.table[self.dp] = 0x2*15;
+					self.table[self.dp] = 0x2*16;
 				}, Token::CONST3 => {
-					self.table[self.dp] = 0x3*15;
+					self.table[self.dp] = 0x3*16;
 				}, Token::CONST4 => {
-					self.table[self.dp] = 0x4*15;
+					self.table[self.dp] = 0x4*16;
 				}, Token::CONST5 => {
-					self.table[self.dp] = 0x5*15;
+					self.table[self.dp] = 0x5*16;
 				}, Token::CONST6 => {
-					self.table[self.dp] = 0x6*15;
+					self.table[self.dp] = 0x6*16;
 				}, Token::CONST7 => {
-					self.table[self.dp] = 0x7*15;
+					self.table[self.dp] = 0x7*16;
 				}, Token::CONST8 => {
-					self.table[self.dp] = 0x8*15;
+					self.table[self.dp] = 0x8*16;
 				}, Token::CONST9 => {
-					self.table[self.dp] = 0x9*15;
+					self.table[self.dp] = 0x9*16;
 				}, Token::CONSTA => {
-					self.table[self.dp] = 0xA*15;
+					self.table[self.dp] = 0xA*16;
 				}, Token::CONSTB => {
-					self.table[self.dp] = 0xB*15;
+					self.table[self.dp] = 0xB*16;
 				}, Token::CONSTC => {
-					self.table[self.dp] = 0xC*15;
+					self.table[self.dp] = 0xC*16;
 				}, Token::CONSTD => {
-					self.table[self.dp] = 0xD*15;
+					self.table[self.dp] = 0xD*16;
 				}, Token::CONSTE => {
-					self.table[self.dp] = 0xE*15;
+					self.table[self.dp] = 0xE*16;
 				}, Token::CONSTF => {
-					self.table[self.dp] = 0xF*15;
+					self.table[self.dp] = 0xF*16;
 				}
 			}
 			if self.dp >= self.table.len() {
@@ -184,11 +197,9 @@ impl Interpreter {
 			'-' => Some(Token::DEC),
 			'>' => Some(Token::RIGHT),
 			'<' => Some(Token::LEFT),
-			',' => Some(Token::GET_CHAR),
+			',' => Some(Token::GET),
 			'.' => Some(Token::PUT_CHAR),
-			'#' => Some(Token::GET_INT),
 			'!' => Some(Token::PUT_INT),
-			'?' => Some(Token::GET_MSG),
 			'@' => Some(Token::SAVE),
 			'*' => Some(Token::LOAD),
 			'0' => Some(Token::CONST0),
