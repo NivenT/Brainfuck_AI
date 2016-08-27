@@ -42,6 +42,13 @@ This program outputs the word hello
 7--------.---.7----..[]]D77-.-3D-
 ```
 
+### loop
+This program continuously outputs the word loop (The target was "looplooploop").
+
+```
+[E++[[4[[7----.+++..+.]]D,]DD
+````
+
 ## Details
 * The interpreter only runs a program for a max of 2 milliseconds (in order to prevent infinite loops)
 * The parser ignores mismatched brackets (Ex. ++>[--<. is the same as ++>--<.)

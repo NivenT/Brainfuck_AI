@@ -13,12 +13,12 @@ use algorithm::*;
 
 fn main() {
 	let start = SteadyTime::now();
-	let mut ga = GAlgo::new(200, 0.1, 0.8, 0.9, 0.08, Box::new("hello".to_string()));
+	let mut ga = GAlgo::new(200, 0.1, 0.8, 0.9, 0.08, Box::new("looplooploop".to_string()));
 
 	let generations_per_print = 100;
 	loop {
 		if ga.generation%generations_per_print == 0 {
-			print!("Generation {}", ga.generation);
+			print!("Generation {} ", ga.generation);
 		}
 
 		let mut individual = ga.rand_prog();
@@ -45,10 +45,10 @@ fn main() {
 
 				println!("\tMost fit program: {}", prog);
 				let mut iptr = Interpreter::new().limit(true);
-				let ret = iptr.run(Interpreter::get_tokens(&mut prog.code), 
+				let _ = iptr.run(Interpreter::get_tokens(&mut prog.code), 
 								   &mut InputTape::new(), 
 								   &mut None);
-				println!("\n\tReturn value: {}", ret.unwrap());
+				println!("\n\tReturn value: {}", iptr.return_val());
 
 				let durr = SteadyTime::now() - start;
 				println!("\nTook {} hours, {} minutes, and {} seconds",
