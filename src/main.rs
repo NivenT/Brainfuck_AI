@@ -4,38 +4,50 @@ extern crate time;
 mod interpreter;
 mod program;
 mod algorithm;
+mod fitness;
 
 use time::SteadyTime;
+
 use interpreter::*;
 use algorithm::*;
 
 fn main() {
 	let start = SteadyTime::now();
-	let mut ga = GAlgo::new(200, 0.1, 0.8, 0.9, 0.08, "hi");
+	let mut ga = GAlgo::new(200, 0.1, 0.8, 0.9, 0.08, Box::new("hello".to_string()));
+
+	let generations_per_print = 100;
 	loop {
-		if ga.generation%50 == 0 {
+		if ga.generation%generations_per_print == 0 {
 			print!("Generation {}", ga.generation);
 		}
 
-		let individual = ga.rand_prog();
+		let mut individual = ga.rand_prog();
 		let solution = ga.step_pop();
 
-		if ga.generation%50 == 1 {
+		if ga.generation%generations_per_print == 1 {
 			println!("(max fitness = {:.3} | min fitness = {:.3})", ga.max_fit, ga.min_fit);
 			println!("\tRandom program: {}", individual);
+
+			let mut interpreter = Interpreter::new().print(false).limit(true);
+			let _ = interpreter.run(Interpreter::get_tokens(&mut individual.code),
+									&mut InputTape::new(),
+									&mut None);
+			println!("\tOutput: {}\n", interpreter.out_stream);
 		}
 
 		match solution {
 			Some(mut prog) => {
-				if ga.generation%50 != 0 {
+				if ga.generation%generations_per_print != 0 {
 					println!("Generation {}", ga.generation);
 				} else {
 					println!("");
 				}
 
 				println!("\tMost fit program: {}", prog);
-				let mut iptr = Interpreter::new();
-				let ret = iptr.run(Interpreter::get_tokens(&mut prog.code), &mut InputTape::new(), &mut None);
+				let mut iptr = Interpreter::new().limit(true);
+				let ret = iptr.run(Interpreter::get_tokens(&mut prog.code), 
+								   &mut InputTape::new(), 
+								   &mut None);
 				println!("\n\tReturn value: {}", ret.unwrap());
 
 				let durr = SteadyTime::now() - start;

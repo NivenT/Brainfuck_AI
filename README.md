@@ -35,6 +35,13 @@ This program outputs the word hi
 6++++++++.+.[>6
 ```
 
+### hello
+This program outputs the word hello
+
+```
+7--------.---.7----..[]]D77-.-3D-
+```
+
 ## Details
 * The interpreter only runs a program for a max of 2 milliseconds (in order to prevent infinite loops)
 * The parser ignores mismatched brackets (Ex. ++>[--<. is the same as ++>--<.)
