@@ -45,3 +45,4 @@ This program outputs the word hello
 ## Details
 * The interpreter only runs a program for a max of 2 milliseconds (in order to prevent infinite loops)
 * The parser ignores mismatched brackets (Ex. ++>[--<. is the same as ++>--<.)
+* Empty loops are ignored (Ex. ++[].-. is the same as ++.-.)
