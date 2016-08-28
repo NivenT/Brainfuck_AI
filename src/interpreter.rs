@@ -1,5 +1,7 @@
+use std::fmt;
+
 use time::{Duration, SteadyTime};
-use rand::random;
+use rand::{thread_rng, Rng};
 
 fn has_matched_brackets(prog: &String) -> bool {
 	prog.chars().fold(0, |accum, c| match c {'['=>accum+1,']'=>accum-1,_=>accum})==-1
@@ -43,7 +45,12 @@ pub struct InputTape {
 	stream: String
 }
 
-#[allow(dead_code)]
+impl fmt::Display for InputTape {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "{}", self.stream)
+	}
+}
+
 impl InputTape {
 	pub fn new() -> InputTape {
 		InputTape{stream: String::new()}
@@ -52,14 +59,9 @@ impl InputTape {
 		InputTape{stream: s.to_string()}
 	}
 	pub fn random(len: usize) -> InputTape {
-		let mut stream = String::new();
-	    for _ in 0..len {
-	    	stream = stream + &random::<u8>().to_string();
-	    }
-	    InputTape{stream: stream}
+	    InputTape{stream: thread_rng().gen_ascii_chars().take(len).collect()}
 	}
-
-	fn read(&mut self) -> u8 {
+	pub fn read(&mut self) -> u8 {
 		if self.stream.len() > 0 {
 			self.stream.remove(0) as u8
 		} else {

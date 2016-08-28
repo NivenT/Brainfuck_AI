@@ -1,5 +1,6 @@
 use std::fmt;
-use rand::{Rng,thread_rng};
+
+use rand::{Rng, thread_rng};
 
 pub const NUM_MUTATIONS: usize = 6;
 

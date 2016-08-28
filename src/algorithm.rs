@@ -1,4 +1,4 @@
-use rand::{Rng,thread_rng,random};
+use rand::{Rng, thread_rng, random};
 
 use program::*;
 use fitness::*;
@@ -20,7 +20,7 @@ impl GAlgo {
 	pub fn new(size: usize, mut_rate: f64, cross_rate: f64, bred: f64, kept: f64, fit: Box<Fitness>) -> GAlgo {
 	    let mut pop = vec![];
 	    for _ in 0..size {
-	    	pop.push(BFProgram::new(thread_rng().gen_range(5,15)));
+	    	pop.push(BFProgram::new(thread_rng().gen_range(0,10)));
 	    }
 	    GAlgo {
 	    	fit_func: fit,

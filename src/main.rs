@@ -6,14 +6,29 @@ mod program;
 mod algorithm;
 mod fitness;
 
+use std::io;
+use std::io::prelude::*;
+use std::str::FromStr;
+
 use time::SteadyTime;
 
 use interpreter::*;
 use algorithm::*;
+use fitness::*;
+
+fn prompt_for_val<T: FromStr>(prompt: &str) -> Result<T, T::Err> {
+    print!("{}", prompt);
+
+    let mut input = String::new();
+    let _ = io::stdout().flush();
+    let _ = io::stdin().read_line(&mut input);
+
+    input.lines().last().unwrap().trim().parse()
+}
 
 fn main() {
 	let start = SteadyTime::now();
-	let mut ga = GAlgo::new(200, 0.1, 0.8, 0.9, 0.08, Box::new("looplooploop".to_string()));
+	let mut ga = GAlgo::new(200, 0.3, 0.8, 0.9, 0.08, Box::new(Adder));
 
 	let generations_per_print = 100;
 	loop {
@@ -28,11 +43,15 @@ fn main() {
 			println!("(max fitness = {:.3} | min fitness = {:.3})", ga.max_fit, ga.min_fit);
 			println!("\tRandom program: {}", individual);
 
+			let mut input = InputTape::random(20);
+			println!("\tInput: {}", input);
+
 			let mut interpreter = Interpreter::new().print(false).limit(true);
 			let _ = interpreter.run(Interpreter::get_tokens(&mut individual.code),
-									&mut InputTape::new(),
+									&mut input,
 									&mut None);
-			println!("\tOutput: {}\n", interpreter.out_stream);
+			println!("\tOutput: {}", interpreter.out_stream);
+			println!("\tReturn Value: {}\n", interpreter.return_val());
 		}
 
 		match solution {
@@ -43,10 +62,14 @@ fn main() {
 					println!("");
 				}
 
-				println!("\tMost fit program: {}", prog);
+				println!("\tMost fit program: {}\n", prog);
+
+				let input = prompt_for_val::<String>("Enter input stream: ").unwrap();
+				println!("Running program...");
+
 				let mut iptr = Interpreter::new().limit(true);
 				let _ = iptr.run(Interpreter::get_tokens(&mut prog.code), 
-								   &mut InputTape::new(), 
+								   &mut InputTape::from_string(&input), 
 								   &mut None);
 				println!("\n\tReturn value: {}", iptr.return_val());
 
