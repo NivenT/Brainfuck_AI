@@ -22,7 +22,7 @@ For the purposes of this project, I have extended the original brainfuck languag
 
 Instruction | Description
 --- | ---
-0-F | The 16 times the hexadecimal digit is stored at the current location (Ex. 5 writes 80 to current position)
+0-F | 16 times the hexadecimal digit is stored at the current location (Ex. 5 writes 80 to current position)
 ! | Output the value at data pointer (as an integer)
 @ | Store the value at data pointer in memory
 * | Replace value at data pointer with value in memory
@@ -50,6 +50,6 @@ This program continuously outputs the word loop (The target was "looplooploop").
 ````
 
 ## Details
-* The interpreter only runs a program for a max of 2 milliseconds (in order to prevent infinite loops)
+* The interpreter only runs a program for a maximum of 2 milliseconds (in order to prevent infinite loops)
 * The parser ignores mismatched brackets (Ex. ++>[--<. is the same as ++>--<.)
 * Empty loops are ignored (Ex. ++[].-. is the same as ++.-.)
